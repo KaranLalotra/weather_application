@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- External CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Sidebar -->
+    <div class="fixed left-0 top-0 h-screen w-16 bg-white shadow-lg flex flex-col items-center py-6 space-y-6 z-50">
+        <div class="text-orange-500 text-2xl animate-pulse">
+            <i class="fas fa-cloud-sun"></i>
+        </div>
+        <button class="sidebar-btn text-gray-400 hover:text-orange-500 transition active" onclick="navigateToHome()">
+            <i class="fas fa-home text-xl"></i>
+        </button>
+    </div>
+
+    <div class="ml-16 px-8 py-6">
+        <!-- Top Header -->
+        <header class="flex items-center justify-between mb-8">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Hello,</p>
+                    <p class="text-lg font-semibold text-gray-800">Weather Explorer</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="cityInput" 
+                        placeholder="Search Here..." 
+                        class="w-80 px-4 py-2 rounded-xl bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+                    >
+                    <button id="searchBtn" class="absolute right-3 top-2.5 text-gray-400 hover:text-orange-500 transition">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <button class="text-gray-600 hover:text-orange-500 transition" onclick="toggleUnits()" title="Toggle °C/°F">
+                    <i class="fas fa-thermometer-half text-xl"></i>
+                </button>
+                <button class="text-gray-600 hover:text-orange-500 transition" onclick="showNotifications()" title="Notifications">
+                    <i class="fas fa-bell text-xl"></i>
+                </button>
+            </div>
+        </header>
+
+        <div id="errorMessage" class="text-red-500 mb-4 hidden"></div>
+
+        <!-- Weather Display -->
+        <div id="weatherContainer" class="hidden">
+            <!-- Main Grid Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Left Column: Main Weather Card -->
+                <div class="gradient-card rounded-3xl shadow-lg p-8 relative overflow-hidden card-hover animate-fadeIn weather-video-container">
+                    <!-- Weather Video Background -->
+                    <video id="mainWeatherVideo" class="weather-video" autoplay loop muted playsinline>
+                        <source src="" type="video/mp4">
+                    </video>
+                    
+                    <div class="weather-content">
+                        <div class="flex items-center text-sm text-gray-600 mb-4">
+                            <i class="fas fa-map-marker-alt mr-2"></i>
+                            <span id="cityName">City Name</span>
+                        </div>
+                        
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">Weather</h2>
+                        <p class="text-gray-600 mb-8" id="date">Today</p>
+                        
+                        <!-- Large Temperature Display -->
+                        <div class="relative">
+                            <h1 class="text-8xl font-bold text-gray-800 mb-2" id="temperature">25°C</h1>
+                            <p class="text-gray-600 mb-6">Feels like <span id="feelsLike">26°C</span></p>
+                            
+                            <!-- Weather Icon Illustration -->
+                            <div class="absolute -right-4 -top-20 animate-float">
+                                <div class="text-9xl" id="weatherIcon">☀️</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Bottom Stats -->
+                        <div class="grid grid-cols-2 gap-4 mt-8">
+                            <div class="bg-lime-200 rounded-2xl p-4 card-hover">
+                                <p class="text-sm text-gray-600 mb-1">Visibility</p>
+                                <p class="text-2xl font-bold text-gray-800" id="visibility">4.3 Km</p>
+                            </div>
+                            <div class="bg-blue-100 rounded-2xl p-4 card-hover">
+                                <p class="text-sm text-gray-600 mb-1">Humidity</p>
+                                <p class="text-2xl font-bold text-gray-800" id="humidity">87%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column: Map View -->
+                <div class="blue-gradient rounded-3xl shadow-lg p-6 relative overflow-hidden text-white card-hover animate-fadeIn" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-3 mb-3">
+                        <h3 class="text-lg font-semibold relative z-10">Location Map</h3>
+                        
+                        <!-- Map Controls -->
+                        <div class="flex items-center gap-2 z-10">
+                            <button class="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center hover:bg-orange-600 transition shadow-lg sidebar-btn" onclick="zoomIn()" title="Zoom In">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition shadow-lg sidebar-btn" onclick="zoomOut()" title="Zoom Out">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition shadow-lg sidebar-btn" onclick="centerMap()" title="Center Map">
+                                <i class="fas fa-crosshairs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="absolute top-4 right-4 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 z-10">
+                        <span class="font-semibold" id="mapTemp">22°C</span>
+                    </div>
+                    
+                    <!-- OpenStreetMap -->
+                    <div id="mapContainer" class="rounded-2xl overflow-hidden"></div>
+                </div>
+            </div>
+
+            <!-- Second Row: Cities, Temperature Check, Humidity -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Favorite Cities -->
+                <div class="bg-white rounded-3xl shadow-lg p-6 card-hover animate-slideIn">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Favorite Cities</h3>
+                    <div id="favoritesContainer" class="space-y-4">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                
+                <!-- How is the temperature today -->
+                <div class="bg-white rounded-3xl shadow-lg p-6 card-hover animate-slideIn" style="animation-delay: 0.1s;">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-6">How is the temperature today?</h3>
+                    
+                    <div class="flex items-center justify-center space-x-8 mb-6">
+                        <button class="w-14 h-14 weather-type-btn bg-orange-500 rounded-full flex items-center justify-center text-white hover:bg-orange-600 transition sidebar-btn" data-type="sunny" onclick="filterByWeatherType('sunny')">
+                            <i class="fas fa-sun text-2xl"></i>
+                        </button>
+                        <button class="w-12 h-12 weather-type-btn bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-200 transition sidebar-btn" data-type="cloudy" onclick="filterByWeatherType('cloudy')">
+                            <i class="fas fa-cloud text-xl"></i>
+                        </button>
+                        <button class="w-12 h-12 weather-type-btn bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-200 transition sidebar-btn" data-type="rainy" onclick="filterByWeatherType('rainy')">
+                            <i class="fas fa-cloud-rain text-xl"></i>
+                        </button>
+                        <button class="w-12 h-12 weather-type-btn bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-200 transition sidebar-btn" data-type="stormy" onclick="filterByWeatherType('stormy')">
+                            <i class="fas fa-umbrella text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Hourly Temperature -->
+                    <div class="grid grid-cols-4 gap-4" id="hourlyTemp">
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-gray-800" id="tempMorning">20°</p>
+                            <p class="text-sm text-gray-500">Morning</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-gray-800" id="tempAfternoon">24°</p>
+                            <p class="text-sm text-gray-500">Afternoon</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-gray-800" id="tempEvening">28°</p>
+                            <p class="text-sm text-gray-500">Evening</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-gray-800" id="tempNight">22°</p>
+                            <p class="text-sm text-gray-500">Night</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Humidity Card -->
+                <div class="dark-card rounded-3xl shadow-lg p-6 text-white relative overflow-hidden card-hover animate-slideIn" style="animation-delay: 0.2s;">
+                    <h3 class="text-xl font-semibold mb-2">Humidity</h3>
+                    <div class="flex items-center text-sm text-gray-300 mb-6">
+                        <i class="fas fa-circle text-green-400 text-xs mr-2"></i>
+                        <span>Good Air Quality</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-4xl font-bold" id="humidityPercent">85%</p>
+                        </div>
+                        <div class="text-6xl opacity-30 animate-float">
+                            🌙
+                        </div>
+                    </div>
+                    
+                    <!-- AQI Info -->
+                    <div class="mt-4">
+                        <p class="text-sm text-gray-300">AQI: <span id="aqiValue" class="font-semibold">-</span></p>
+                        <p class="text-xs text-gray-400" id="aqiDescription">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Third Row: Tomorrow Forecast -->
+            <div class="lime-card rounded-3xl shadow-lg p-8 relative overflow-hidden mb-6 card-hover animate-fadeIn weather-video-container">
+                <!-- Tomorrow Weather Video Background -->
+                <video id="tomorrowWeatherVideo" class="weather-video" autoplay loop muted playsinline>
+                    <source src="" type="video/mp4">
+                </video>
+                
+                <div class="weather-content">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-700 mb-2">Tomorrow</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="tomorrowLocation">Dhaka, Bangladesh</h3>
+                            <div class="mt-8">
+                                <p class="text-6xl font-bold text-gray-800" id="tomorrowTemp">25°C</p>
+                                <p class="text-lg text-gray-700 mt-2" id="tomorrowDesc">Rainy</p>
+                            </div>
+                            
+                            <!-- Additional Info -->
+                            <div class="mt-6 flex space-x-6 text-sm">
+                                <div class="flex items-center">
+                                    <i class="fas fa-wind text-gray-600 mr-2"></i>
+                                    <span id="windSpeed" class="text-gray-700">0 m/s</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-compress-alt text-gray-600 mr-2"></i>
+                                    <span id="pressure" class="text-gray-700">0 hPa</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Illustration -->
+                        <div class="absolute right-8 bottom-0 animate-float">
+                            <div class="text-9xl" id="tomorrowIcon">☔</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sunrise/Sunset -->
+                    <div class="absolute top-6 right-6 text-right text-sm text-gray-700">
+                        <p><i class="fas fa-sun text-yellow-600 mr-2"></i><span id="sunrise">00:00</span></p>
+                        <p class="mt-1"><i class="fas fa-moon text-indigo-600 mr-2"></i><span id="sunset">00:00</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Next 12 Hours Forecast -->
+            <div class="bg-white rounded-3xl shadow-lg p-8 mb-6 card-hover animate-fadeIn">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center justify-between">
+                    <span>🕒 Next 12 Hours Forecast</span>
+                    <button onclick="refreshHourlyForecast()" class="text-sm text-orange-500 hover:text-orange-600 font-normal">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="hourlyForecastContainer">
+                    <!-- Hourly forecast items will be populated here -->
+                </div>
+            </div>
+            
+            <!-- 5-Day Forecast -->
+            <div class="bg-white rounded-3xl shadow-lg p-8 mb-6 card-hover animate-fadeIn">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center justify-between">
+                    <span>📅 5-Day Forecast</span>
+                    <button onclick="refreshForecast()" class="text-sm text-orange-500 hover:text-orange-600 font-normal">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4" id="sevenDayForecastContainer">
+                    <!-- 7-day forecast items will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="hidden text-center">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mb-4"></div>
+            <p class="text-gray-600">Loading weather data...</p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentUnits = 'metric'; // Default to Celsius
+        const favoriteCities = ['New York', 'London'];
+        let currentWeatherData = null;
+        let map = null;
+        let mapMarker = null;
+        let currentLat = 0;
+        let currentLon = 0;
+
+        // Weather video URLs (using free stock videos)
+        const weatherVideos = {
+            clear: 'https://assets.mixkit.co/videos/preview/mixkit-blue-sky-with-white-clouds-1631-large.mp4',
+            clouds: 'https://assets.mixkit.co/videos/preview/mixkit-clouds-moving-in-the-blue-sky-2408-large.mp4',
+            rain: 'https://assets.mixkit.co/videos/preview/mixkit-rain-falling-on-the-water-of-a-lake-2044-large.mp4',
+            thunderstorm: 'https://assets.mixkit.co/videos/preview/mixkit-storm-clouds-in-the-sky-2408-large.mp4',
+            snow: 'https://assets.mixkit.co/videos/preview/mixkit-winter-landscape-2564-large.mp4',
+            mist: 'https://assets.mixkit.co/videos/preview/mixkit-fog-in-a-forest-2486-large.mp4',
+            default: 'https://assets.mixkit.co/videos/preview/mixkit-blue-sky-with-white-clouds-1631-large.mp4'
+        };
+
+        // Initialize map
+        function initMap(lat, lon) {
+            try {
+                // Remove existing map if any
+                if (map) {
+                    map.remove();
+                    map = null;
+                }
+                
+                currentLat = lat;
+                currentLon = lon;
+                
+                // Wait a bit for the container to be ready
+                setTimeout(() => {
+                    // Create map
+                    map = L.map('mapContainer', {
+                        center: [lat, lon],
+                        zoom: 10,
+                        zoomControl: false // We have custom controls
+                    });
+                    
+                    // Add CartoDB English tile layer (shows labels in English)
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; OpenStreetMap &copy; CARTO',
+                        subdomains: 'abcd',
+                        maxZoom: 20
+                    }).addTo(map);
+                    
+                    // Add weather temperature layer from OpenWeatherMap
+                    L.tileLayer(`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=fa66dceec1a55ad267c15aa70248a96e`, {
+                        attribution: 'Weather data &copy; OpenWeatherMap',
+                        opacity: 0.5,
+                        maxZoom: 18
+                    }).addTo(map);
+                    
+                    // Add marker for current location
+                    if (mapMarker) {
+                        mapMarker.remove();
+                    }
+                    
+                    const customIcon = L.divIcon({
+                        className: 'custom-marker',
+                        html: '<div style="background: #FF6B35; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-map-marker-alt"></i></div>',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    });
+                    
+                    mapMarker = L.marker([lat, lon], { icon: customIcon }).addTo(map)
+                        .bindPopup('<b>Current Location</b>')
+                        .openPopup();
+                    
+                    // Force map to resize
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 100);
+                    
+                }, 200);
+                
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                showNotification('Map Error', 'Failed to load map. Please try again.');
+            }
+        }
+        
+        // Update weather video based on condition
+        function updateWeatherVideo(description, elementId = 'mainWeatherVideo') {
+            const videoElement = document.getElementById(elementId);
+            if (!videoElement) return;
+            
+            const desc = description.toLowerCase();
+            let videoUrl = weatherVideos.default;
+            
+            if (desc.includes('clear') || desc.includes('sunny')) {
+                videoUrl = weatherVideos.clear;
+            } else if (desc.includes('cloud')) {
+                videoUrl = weatherVideos.clouds;
+            } else if (desc.includes('rain') || desc.includes('drizzle')) {
+                videoUrl = weatherVideos.rain;
+            } else if (desc.includes('thunder') || desc.includes('storm')) {
+                videoUrl = weatherVideos.thunderstorm;
+            } else if (desc.includes('snow')) {
+                videoUrl = weatherVideos.snow;
+            } else if (desc.includes('mist') || desc.includes('fog') || desc.includes('haze')) {
+                videoUrl = weatherVideos.mist;
+            }
+            
+            if (videoElement.src !== videoUrl) {
+                videoElement.src = videoUrl;
+                videoElement.load();
+                videoElement.play().catch(e => console.log('Video autoplay prevented:', e));
+            }
+        }
+
+        // Set current date
+        document.getElementById('date').textContent = new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+
+        // Event listeners
+        document.getElementById('searchBtn').addEventListener('click', searchWeather);
+        document.getElementById('cityInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchWeather();
+            }
+        });
+
+        // Weather icon mapping
+        function getWeatherEmoji(description) {
+            const desc = description.toLowerCase();
+            if (desc.includes('clear') || desc.includes('sunny')) return '☀️';
+            if (desc.includes('cloud')) return '☁️';
+            if (desc.includes('rain') || desc.includes('drizzle')) return '🌧️';
+            if (desc.includes('thunder') || desc.includes('storm')) return '⛈️';
+            if (desc.includes('snow')) return '❄️';
+            if (desc.includes('mist') || desc.includes('fog')) return '🌫️';
+            return '🌤️';
+        }
+        
+        // Button Functions
+        function navigateToHome() {
+            document.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.sidebar-btn').classList.add('active');
+            showNotification('Home', '🏠 Weather Dashboard');
+            // Refresh the current weather
+            if (currentWeatherData) {
+                const city = document.getElementById('cityInput').value;
+                if (city) searchWeather();
+            }
+        }
+        
+        function showLocationPicker() {
+            // Removed - function no longer needed
+        }
+        
+        function showCalendar() {
+            // Removed - function no longer needed
+        }
+        
+        function showSettings() {
+            // Removed - function no longer needed
+        }
+        
+        function toggleUnits() {
+            currentUnits = currentUnits === 'metric' ? 'imperial' : 'metric';
+            showNotification('Units Changed', `Switched to ${currentUnits === 'metric' ? 'Celsius (°C)' : 'Fahrenheit (°F)'}`);
+            if (currentWeatherData) searchWeather();
+        }
+        
+        function showNotifications() {
+            showNotification('Weather Alert', '⛅ No active weather alerts for your location');
+        }
+        
+        function zoomIn() {
+            if (map) {
+                map.zoomIn();
+                showNotification('Zoom In', '🔍 Map zoomed in');
+            }
+        }
+        
+        function zoomOut() {
+            if (map) {
+                map.zoomOut();
+                showNotification('Zoom Out', '🔍 Map zoomed out');
+            }
+        }
+        
+        function centerMap() {
+            if (map && currentLat && currentLon) {
+                map.setView([currentLat, currentLon], 10);
+                showNotification('Map Centered', '🎯 Centered on current location');
+            }
+        }
+        
+        function toggleMapLayers() {
+            showNotification('Map Layers', '🗺️ Temperature layer active');
+        }
+        
+        function filterByWeatherType(type) {
+            document.querySelectorAll('.weather-type-btn').forEach(btn => {
+                btn.classList.remove('bg-orange-500', 'text-white');
+                btn.classList.add('bg-gray-100', 'text-gray-400');
+            });
+            event.target.closest('.weather-type-btn').classList.remove('bg-gray-100', 'text-gray-400');
+            event.target.closest('.weather-type-btn').classList.add('bg-orange-500', 'text-white');
+            showNotification('Filter Applied', `Showing ${type} weather conditions`);
+        }
+        
+        function refreshHourlyForecast() {
+            showNotification('Refreshing', '🔄 Updating hourly forecast...');
+            searchWeather();
+        }
+        
+        function refreshForecast() {
+            showNotification('Refreshing', '🔄 Updating 7-day forecast...');
+            searchWeather();
+        }
+        
+        function showNotification(title, message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-8 bg-white rounded-xl shadow-2xl p-4 z-50 animate-slideIn';
+            notification.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                    <div>
+                        <p class="font-semibold text-gray-800">${title}</p>
+                        <p class="text-sm text-gray-600">${message}</p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Search functionality
+        function searchWeather() {
+            const city = document.getElementById('cityInput').value.trim();
+            if (!city) return;
+
+            // Show loading spinner
+            document.getElementById('loadingSpinner').classList.remove('hidden');
+            document.getElementById('weatherContainer').classList.add('hidden');
+            document.getElementById('errorMessage').classList.add('hidden');
+
+            // Fetch weather data
+            fetch(`/weather?city=${encodeURIComponent(city)}&units=${currentUnits}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        currentWeatherData = data;
+                        displayWeather(data);
+                        loadFavoriteCities(); // Refresh favorites when we search
+                    }
+                })
+                .catch(error => {
+                    showError('Error fetching weather data: ' + error.message);
+                })
+                .finally(() => {
+                    document.getElementById('loadingSpinner').classList.add('hidden');
+                });
+        }
+
+        function displayWeather(data) {
+            // Update current weather
+            document.getElementById('cityName').textContent = `${data.current.city}, ${data.current.country}`;
+            document.getElementById('temperature').textContent = `${data.current.temperature}${data.current.unit_symbol}`;
+            document.getElementById('mapTemp').textContent = `${data.current.temperature}${data.current.unit_symbol}`;
+            document.getElementById('feelsLike').textContent = `${data.current.feels_like}${data.current.unit_symbol}`;
+            document.getElementById('humidity').textContent = `${data.current.humidity}%`;
+            document.getElementById('humidityPercent').textContent = `${data.current.humidity}%`;
+            document.getElementById('windSpeed').textContent = currentUnits === 'metric' ? `${data.current.wind_speed} m/s` : `${data.current.wind_speed} mph`;
+            document.getElementById('pressure').textContent = `${data.current.pressure} hPa`;
+            document.getElementById('visibility').textContent = `${data.current.visibility} km`;
+            document.getElementById('sunrise').textContent = data.current.sunrise;
+            document.getElementById('sunset').textContent = data.current.sunset;
+            
+            // Update weather icon
+            document.getElementById('weatherIcon').textContent = getWeatherEmoji(data.current.description);
+            
+            // Update weather video
+            updateWeatherVideo(data.current.description);
+            
+            // Initialize map with current location
+            initMap(data.current.lat, data.current.lon);
+
+            // Update air quality
+            if (data.air_quality) {
+                document.getElementById('aqiValue').textContent = data.air_quality.aqi;
+                document.getElementById('aqiDescription').textContent = data.air_quality.description;
+            } else {
+                document.getElementById('aqiValue').textContent = '-';
+                document.getElementById('aqiDescription').textContent = 'No data';
+            }
+
+            // Update tomorrow's forecast (use first forecast item)
+            if (data.forecast && data.forecast.length > 0) {
+                const tomorrow = data.forecast[0];
+                document.getElementById('tomorrowLocation').textContent = `${data.current.city}, ${data.current.country}`;
+                document.getElementById('tomorrowTemp').textContent = `${tomorrow.temperature}${tomorrow.unit_symbol}`;
+                document.getElementById('tomorrowDesc').textContent = tomorrow.description;
+                document.getElementById('tomorrowIcon').textContent = getWeatherEmoji(tomorrow.description);
+                
+                // Update tomorrow's video background
+                updateWeatherVideo(tomorrow.description, 'tomorrowWeatherVideo');
+            }
+            
+            // Update hourly forecast (next 12 hours)
+            if (data.hourly) {
+                const hourlyContainer = document.getElementById('hourlyForecastContainer');
+                hourlyContainer.innerHTML = '';
+                
+                data.hourly.forEach((hour, index) => {
+                    const hourCard = document.createElement('div');
+                    hourCard.className = 'bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 text-center card-hover animate-fadeIn';
+                    hourCard.style.animationDelay = `${index * 0.1}s`;
+                    hourCard.innerHTML = `
+                        <p class="text-sm text-gray-600 mb-2">${hour.hour}</p>
+                        <div class="text-4xl mb-2">${getWeatherEmoji(hour.description)}</div>
+                        <p class="text-2xl font-bold text-gray-800">${hour.temperature}${hour.unit_symbol}</p>
+                        <p class="text-xs text-gray-600 mt-2">${hour.description}</p>
+                        <div class="flex justify-center space-x-2 mt-2 text-xs text-gray-500">
+                            <span title="Humidity"><i class="fas fa-tint"></i> ${hour.humidity}%</span>
+                        </div>
+                    `;
+                    hourlyContainer.appendChild(hourCard);
+                });
+                
+                // Update simple hourly temps
+                if (data.hourly.length >= 4) {
+                    document.getElementById('tempMorning').textContent = `${data.hourly[0].temperature}°`;
+                    document.getElementById('tempAfternoon').textContent = `${data.hourly[1].temperature}°`;
+                    document.getElementById('tempEvening').textContent = `${data.hourly[2].temperature}°`;
+                    document.getElementById('tempNight').textContent = `${data.hourly[3].temperature}°`;
+                }
+            }
+            
+            // Update 7-day forecast
+            if (data.forecast) {
+                const forecastContainer = document.getElementById('sevenDayForecastContainer');
+                forecastContainer.innerHTML = '';
+                
+                data.forecast.forEach((day, index) => {
+                    const dayCard = document.createElement('div');
+                    dayCard.className = 'bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-4 text-center card-hover animate-fadeIn';
+                    dayCard.style.animationDelay = `${index * 0.1}s`;
+                    dayCard.innerHTML = `
+                        <p class="font-bold text-gray-800 text-sm">${day.date}</p>
+                        <p class="text-xs text-gray-600 mb-2">${day.date_short}</p>
+                        <div class="text-5xl my-3">${getWeatherEmoji(day.description)}</div>
+                        <p class="text-2xl font-bold text-gray-800">${day.temperature}${day.unit_symbol}</p>
+                        <p class="text-xs text-gray-500 mt-1">${day.temp_min}°/${day.temp_max}°</p>
+                        <p class="text-xs text-gray-600 mt-2">${day.description}</p>
+                    `;
+                    forecastContainer.appendChild(dayCard);
+                });
+            }
+
+            // Show weather container
+            document.getElementById('weatherContainer').classList.remove('hidden');
+        }
+
+        function loadFavoriteCities() {
+            const favoritesContainer = document.getElementById('favoritesContainer');
+            favoritesContainer.innerHTML = '<p class="text-gray-500 text-center text-sm">Loading...</p>';
+            
+            // Fetch weather for favorite cities
+            fetch(`/favorites?cities=${encodeURIComponent(favoriteCities.join(','))}&units=${currentUnits}`)
+                .then(response => response.json())
+                .then(data => {
+                    favoritesContainer.innerHTML = '';
+                    
+                    if (data.favorites && data.favorites.length > 0) {
+                        data.favorites.forEach(city => {
+                            const cityCard = document.createElement('div');
+                            cityCard.className = 'flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition cursor-pointer card-hover';
+                            cityCard.onclick = () => {
+                                document.getElementById('cityInput').value = city.city;
+                                searchWeather();
+                            };
+                            cityCard.innerHTML = `
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-3xl">${getWeatherEmoji(city.description)}</div>
+                                    <div>
+                                        <p class="font-semibold text-gray-800">${city.city}</p>
+                                        <p class="text-xs text-gray-500">${city.description}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xl font-bold text-gray-800">${city.temperature}${city.unit_symbol}</p>
+                                    <p class="text-xs text-gray-500">${city.temp_min}/${city.temp_max}${city.unit_symbol}</p>
+                                </div>
+                            `;
+                            favoritesContainer.appendChild(cityCard);
+                        });
+                    } else {
+                        favoritesContainer.innerHTML = '<p class="text-gray-500 text-center text-sm">No data</p>';
+                    }
+                })
+                .catch(error => {
+                    favoritesContainer.innerHTML = '<p class="text-red-500 text-center text-sm">Error loading cities</p>';
+                    console.error('Error loading favorite cities:', error);
+                });
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+
+        // Load default city weather on page load
+        window.addEventListener('load', function() {
+            document.getElementById('cityInput').value = 'Dhaka';
+            searchWeather();
+            loadFavoriteCities();
+        });
+    </script>
+</body>
+</html>
+
+<!-- External JavaScript -->
+<script src="{{ url_for('static', filename='js/weather.js') }}"></script>
