@@ -1,0 +1,275 @@
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    transition: background 0.5s ease;
+    position: relative;
+    overflow-x: hidden;
+}
+
+body.day-mode {
+    background: linear-gradient(135deg, #87CEEB 0%, #98D8E8 50%, #FFE5B4 100%);
+}
+
+body.night-mode {
+    background: linear-gradient(135deg, #0a1128 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+/* Animated stars for night mode */
+body.night-mode::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(2px 2px at 20px 30px, white, transparent),
+        radial-gradient(2px 2px at 60px 70px, white, transparent),
+        radial-gradient(1px 1px at 50px 50px, white, transparent),
+        radial-gradient(1px 1px at 130px 80px, white, transparent),
+        radial-gradient(2px 2px at 90px 10px, white, transparent),
+        radial-gradient(1px 1px at 160px 120px, white, transparent),
+        radial-gradient(2px 2px at 200px 90px, white, transparent),
+        radial-gradient(1px 1px at 240px 50px, white, transparent),
+        radial-gradient(1px 1px at 280px 150px, white, transparent),
+        radial-gradient(2px 2px at 320px 40px, white, transparent);
+    background-size: 400px 400px;
+    background-repeat: repeat;
+    animation: twinkle 3s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.6;
+}
+
+/* Moon for night mode */
+body.night-mode::after {
+    content: '';
+    position: fixed;
+    top: 80px;
+    right: 100px;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle at 30% 30%, #fff, #f4f4f4);
+    border-radius: 50%;
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.4), 0 0 80px rgba(255, 255, 255, 0.2);
+    animation: float 6s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Sun for day mode */
+body.day-mode::after {
+    content: '';
+    position: fixed;
+    top: 80px;
+    right: 100px;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, #FFD700, #FFA500);
+    border-radius: 50%;
+    box-shadow: 
+        0 0 60px rgba(255, 215, 0, 0.6),
+        0 0 120px rgba(255, 165, 0, 0.4);
+    animation: rotate 30s linear infinite, pulse 4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Clouds for day mode */
+body.day-mode::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(ellipse 100px 40px at 100px 150px, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(ellipse 120px 50px at 300px 200px, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(ellipse 90px 35px at 500px 180px, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(ellipse 110px 45px at 700px 160px, rgba(255, 255, 255, 0.6), transparent);
+    animation: clouds 60s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+@keyframes clouds {
+    from { transform: translateX(0); }
+    to { transform: translateX(-200px); }
+}
+
+body.night-mode .bg-white {
+    background: rgba(255, 255, 255, 0.95) !important;
+}
+
+body.night-mode header {
+    color: #ffffff;
+}
+
+body.night-mode header p,
+body.night-mode header input::placeholder {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+body.night-mode #cityInput {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+body.night-mode #cityInput:focus {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Ensure all content is above background animations */
+.ml-16 {
+    position: relative;
+    z-index: 2;
+}
+
+.fixed {
+    z-index: 50;
+}
+
+.gradient-card {
+    background: linear-gradient(135deg, #d4f1f4 0%, #e8f5e9 100%);
+}
+
+.blue-gradient {
+    background: linear-gradient(135deg, #89CFF0 0%, #4A90E2 100%);
+}
+
+.dark-card {
+    background: linear-gradient(135deg, #2C3E50 0%, #1a252f 100%);
+}
+
+.lime-card {
+    background: linear-gradient(135deg, #D4E157 0%, #AED581 100%);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slideIn {
+    animation: slideIn 0.5s ease-out forwards;
+}
+
+.animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+.card-hover {
+    transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.btn-active {
+    background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+    color: white;
+}
+
+.sidebar-btn {
+    transition: all 0.3s ease;
+}
+
+.sidebar-btn:hover {
+    transform: scale(1.1);
+}
+
+.sidebar-btn.active {
+    color: #FF6B35;
+    background: rgba(255, 107, 53, 0.1);
+    border-radius: 8px;
+}
+
+/* Weather video backgrounds */
+.weather-video-container {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.5s ease;
+}
+
+.weather-video-container.night-mode {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.weather-video-container.night-mode .weather-content {
+    color: #e0e0e0;
+}
+
+.weather-video-container.night-mode h1,
+.weather-video-container.night-mode h2,
+.weather-video-container.night-mode h3 {
+    color: #ffffff;
+}
+
+.weather-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.4;
+    z-index: 0;
+    filter: blur(2px);
+}
+
+.weather-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* Map styles */
+#mapContainer {
+    width: 100%;
+    height: 100%;
+    min-height: 380px;
+    max-height: 380px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.leaflet-container {
+    border-radius: 16px;
+}
+
+
