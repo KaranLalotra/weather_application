@@ -74,6 +74,7 @@ The server runs on 0.0.0.0:5000 (accessible on your local network if allowed by 
     └── js/
         └── weather.js
 
+
 ⚙️ Environment & Configuration
 Setting	Location	Description
 Default City	app.py (index route)	Shown on initial load (default: Dhaka)
